@@ -17,8 +17,8 @@ foreach ($Gpo in $AllGpos) {
 
 ## export HTML
 $gpoName = $gpo.DisplayName
-$gpoExportHTML = $gpoExportPath + "\$gpoName.html"
-Get-GPOReport -Name $Gpo.DisplayName -ReportType HTML -Path $gpoExportHTML
+$gpoExportXML = $gpoExportPath + "\$gpoName.xml"
+Get-GPOReport -Name $Gpo.DisplayName -ReportType XML -Path $gpoExportXML
 
 ## create table for properties
 $properties = @{
