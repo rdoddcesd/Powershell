@@ -4,7 +4,7 @@ param
     (
         [Parameter(Mandatory=$true)] $hostname,
         [Parameter(Mandatory=$true)] $driveletter,
-		[Parameter(Mandatory=$true)] $logCount
+	[Parameter(Mandatory=$true)] $logCount
     )
 
 $logPath = "\\" + $hostname + "\" + $driveletter + "$" + "\Winevt\Logs"
