@@ -1,4 +1,5 @@
-# .\deleteLogs.ps1 -hostname ad02 -driveletter e -logcount 65
+# https://github.com/rdoddcesd/Powershell/blob/main/deleteLogs.ps1
+# .\deleteLogs.ps1 -hostname ad01 -driveletter e -logcount 100
 
 param 
     (
@@ -16,5 +17,5 @@ $itemList = Get-ChildItem -Path $logSearch | Sort-Object LastWriteTime -desc  | 
 ForEach ($item in $itemList) {
     $itemPath = $logPath + "\" + $item.name
     $itemPath
-    #Remove-Item -LiteralPath $itemPath
+    Remove-Item -LiteralPath $itemPath
 }
