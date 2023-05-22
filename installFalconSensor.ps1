@@ -8,6 +8,12 @@ $installedPath = 'C:\Program Files\CrowdStrike\CSFalconService.exe'
 if($sophosPath) {
     "Sophos is installed"
 } Else{
+    continue
+}
+
+if($sophosPath) {
+    "Sophos is still installed"
+} Else{
     "Test if Falcon installer is availible"
     if (Test-Path -Path $installer) {
         "Path exists!"
