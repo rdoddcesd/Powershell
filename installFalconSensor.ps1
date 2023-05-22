@@ -5,13 +5,11 @@ $sophosPath = "C:\Program Files\Sophos"
 $installerArguments = "/install /quiet /norestart CID=$cid"
 $installedPath = 'C:\Program Files\CrowdStrike\CSFalconService.exe'
 
-if($sophosPath) {
+if(Test-Path $sophosPath) {
     "Sophos is installed"
-} Else{
-    continue
 }
 
-if($sophosPath) {
+if(Test-Path $sophosPath) {
     "Sophos is still installed"
 } Else{
     "Test if Falcon installer is availible"
