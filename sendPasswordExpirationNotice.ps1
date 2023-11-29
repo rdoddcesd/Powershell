@@ -25,7 +25,7 @@ Param
     [Parameter(Mandatory = $true, HelpMessage = "OU of users to target.")][string] $targetOU
 )
 
-$userList = Get-ADUser -Filter 'Enabled -eq $True' -SearchBase $targetOU -Properties PasswordLastSet,mail | Where-Object {$_.PasswordLastSet -lt (Get-Date).adddays(-$passAge)} | Select-Object Name,SamAccountName,mail,PasswordLastSet
+$userList = Get-ADUser -Filter 'Enabled -eq $True' -SearchBase $targetOU -Properties PasswordLastSet,mail | Where-Object {$_.PasswordLastSet -lt (Get-Date).adddays(-$passAge) -and $_.mail -ne $null} | Select-Object Name,SamAccountName,mail,PasswordLastSet
 
 $From = "no-reply@district.k12.or.us"
 $To = "password-alerts@district.k12.or.us"
