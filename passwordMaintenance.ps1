@@ -16,11 +16,11 @@
     rdodd@clackesd.k12.or.us
 
 .EXAMPLE
-    Reset users passwords...
-    passwordMaintenance.ps1 -feedUsers .\feedUsers.csv -logFile .\log\resetPasswordLog20230823.log
-
     Generate list of last password change
-    passwordMaintenance.ps1 -feedUsers .\feedUsers.csv -logFile .\log\resetPasswordLog20230823.log -passLastSet
+    passwordMaintenance.ps1 -feedUsers .\feedUsers.csv -logFile .\log\resetPasswordLog20230823.log
+	
+	Reset users passwords...
+    passwordMaintenance.ps1 -feedUsers .\feedUsers.csv -logFile .\log\resetPasswordLog20230823.log -resetPassword
 #>
 
 
@@ -28,28 +28,33 @@
 Param
 (
     [Parameter(Position = 0, Mandatory = $true)][Object[]] $feedUsers,
-    [Parameter(Position = 1, Mandatory = $false)][Switch] $passLastSet,
+    [Parameter(Position = 1, Mandatory = $false)][Switch] $resetPassword,
     [Parameter(Position = 2, Mandatory = $true)][String] $logFile
 )
 
 foreach ($user in Import-Csv -Path $feedUsers)
 {
-    if ($passLastSet)
+    if ($resetPassword)
     {
-        $userInfo = Get-ADUser -Identity $user.samaccountname -Properties samaccountname,pwdLastSet,whenCreated | Select-Object SamAccountName,pwdLastSet,whenCreated | Export-Csv $logFile -NoTypeInformation -Append
+		Write-Output "[$(Get-Date -UFormat "%T")] SET-PASS: $($user.SamAccountName)" | Out-File -Append $logFile
+        Set-ADAccountPassword -Identity $user.SamAccountName -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $user.AccountPassword -Force)
+        
     }
     else
     {
-        Write-Output "[$(Get-Date -UFormat "%T")] SET-PASS: $($user.SamAccountName)" | Out-File -Append $logFile
-        Set-ADAccountPassword -Identity $user.SamAccountName -Reset -NewPassword (ConvertTo-SecureString -AsPlainText $user.AccountPassword -Force)
+        $userInfo = Get-ADUser -Identity $user.samaccountname -Properties samaccountname,PasswordLastSet,whenCreated | Select-Object SamAccountName,PasswordLastSet,whenCreated
+		$userList = $userInfo | Where-Object {($_.PasswordLastSet -lt ($_.whenCreated.AddSeconds(60)))}
+		$passwordList = $userList | Select-Object SamAccountName,PasswordLastSet,whenCreated,@{name="AccountPassword"; expression={ $user.AccountPassword }}
+		$passwordList | Export-Csv $logFile -NoTypeInformation -Append
     }
 }
 
 if ($passLastSet)
 {
-    "done"
+	Write-Output "[$(Get-Date -UFormat "%T")] INFO: All passwords for new accounts reset" | Out-File -Append $logFile
+    
 }
 else
 {
-Write-Output "[$(Get-Date -UFormat "%T")] INFO: All passwords for new accounts reset" | Out-File -Append $logFile
+	"done"
 }
