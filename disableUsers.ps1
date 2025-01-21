@@ -1,86 +1,61 @@
 <#
 .SYNOPSIS
-    Name: disableUsers.ps1
-    Disables, removes from group and moves to disabled OU.
+    Name: cleanupUsers.ps1
+    Builds list of users not included in feed file.
 .DESCRIPTION
-    Given a CSV of SamAccountName's. Users will be disabled, removed from groups and moved to disabled OU.
+    Given a CSV of User ID's. Builds a list of users not in CSV. List can then be used to disable, removed from groups and moved to disabled OU.
 .PARAMETER feedFile
-    CSV with header of SamAccountName containing list of users to be diasabled and removed from all groups.
+    CSV with header of userID containing list of active users.
+.PARAMETER searchOU
+    OU of Users to be evaluated, search is recursive
+.PARAMETER adUniqueID
+    Active directory Unique user identifier, ie. sAMAccountName
+.PARAMETER feedUniqueID
+    Feed file Unique user identifier, ie. SamAccountName
 .PARAMETER logFile
     Location of Log file
-.PARAMETER disabledOU
-    DN of Disabled users OU
 .NOTES
     Version: 1.0
     Updated: 
-    Release Date: 20230515
+    Release Date: 20241118
    
     Author: 
     Ryan Dodd - Systems Infrastructure Engineer II
     Clackamas Education Service District - Technology
     rdodd@clackesd.k12.or.us
 .EXAMPLE
-    .\disableUsers.ps1 -feedFile users.csv -logFile log\disableUsersLog.txt -disabledOU
+    .\cleanupUsers.ps1 -feedFile .\data\users.csv -logFile .\log\disableUsersLog.txt -searchOU "OU=Students,DC=summitlc,DC=k12,DC=or,DC=us" -adUniqueID sAMAccountName -feedUniqueID SamAccountName
 #>
 
 Param
 (
-    [Parameter(Mandatory = $true, HelpMessage = "CSV with header of SamAccountName")][string] $feedFile,
-    [Parameter(Mandatory = $true, HelpMessage = "Log location")][string] $logFile,
-    [Parameter(Mandatory = $true, HelpMessage = "DN of Disabled users OU")][string] $disabledOU
+    [Parameter(Mandatory = $true, HelpMessage = "CSV with header of userID")][string] $feedFile,
+    [Parameter(Mandatory = $true, HelpMessage = "DN of OU to search")][string] $searchOU,
+    [Parameter(Mandatory = $true, HelpMessage = "Active directory Unique user identifier,")][string] $adUniqueID,
+    [Parameter(Mandatory = $true, HelpMessage = "Feed file Unique user identifier")][string] $feedUniqueID,
+    [Parameter(Mandatory = $true, HelpMessage = "Log location")][string] $logFile
 )
 
-function Remove-AllADGroups()
-{
-    Param
-    (
-        [Parameter(Mandatory = $true)][string] $SamAccountName
-    )
+$users = Get-ADUser -Filter * -SearchBase $searchOU -Properties $adUniqueID
+$feed = Import-Csv -Path $feedFile
+$userObjectList = @()
 
-    Write-Output "[$(Get-Date -UFormat "%T")] RMV-ALL-GRP: $SamAccountName" | Out-File -Append $logFile
+foreach ($user in $users) {
+    $adUserID = $user.$adUniqueID
+    $feedUserID = $feed | Where-Object {$_.$feedUniqueID -match $adUserID} | Select-Object $feedUniqueID
+    $adCurrentOU = ($user.DistinguishedName -split ",",2)[1]
 
-    $stringList = ""
-
-    # Get the AD user and also select the MemberOf and ObjectGUID attributes
-    $user = Get-ADuser $SamAccountName -Properties MemberOf,ObjectGUID
-
-    if (!($user.MemberOf))
-    {
-        return ""
+    if(!$feedUserID){
+        $adUserID
+        $currentUserObject = [PSCustomObject]@{
+            adUserID = $adUserID
+            adCurrentOU = $adCurrentOU
+        }
+        $userObjectList += $currentUserObject
     }
-
-    foreach ($group in $user.MemberOf)
-    {
-        $groupName = "$group".Split(',')[0].Split('=')[1]
-
-        Write-Output "[$(Get-Date -UFormat "%T")]              $($groupName)" | Out-File -Append $logFile
-
-        Remove-ADGroupMember -Identity $groupName -Members $user.ObjectGUID -Confirm:$false
-        $stringList += ("," + $groupName)
-    }
-
-    # return the list (minus the first comma)
-    return $stringList.Substring(1)
 }
 
-function Disable-ADStudent()
-{
-    Param
-    (
-        [Parameter(Mandatory = $true)][string] $SamAccountName
-    )
+$userObjectList | Export-Csv -Path $logFile -NoTypeInformation
 
-    # Disable account object in AD
-    Write-Output "[$(Get-Date -UFormat "%T")] DIS-USR: $SamAccountName" | Out-File -Append $logFile
-    Disable-ADAccount -Identity $samAccountName
-    Move-ADObject -Identity (Get-ADuser -Identity $SamAccountName).DistinguishedName -TargetPath $disabledOU
-}
-
-$feed = Import-Csv $feedFile
-
-foreach ($feedUser in $feed)
-{
-
-    Remove-AllADGroups -SamAccountName $feedUser.SamAccountName
-    Disable-ADStudent -SamAccountName $feedUser.SamAccountName
-}
+#$users.count
+#$filter.count
