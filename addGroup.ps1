@@ -4,8 +4,12 @@
     Adds user to group
 .DESCRIPTION
     Created to add users to groups based on roster data. Takes CSV input.
-.PARAMETER RosterData
-    CSV with header of studentid and group.
+.PARAMETER feedFile
+    CSV with list of users samAccountName.
+.PARAMETER feedUniqueID
+    Feed file Unique user identifier, ie. SamAccountName
+.PARAMETER groupName
+    AD Group Name
 .NOTES
     Version: 1.0
     Updated: 
@@ -16,19 +20,19 @@
     Clackamas Education Service District - Technology
     rdodd@clackesd.k12.or.us
 .EXAMPLE
-    .\addGroup.ps1 .\groupData.csv
+    .\addGroup.ps1 -feedFile .\data\adstudents-LOSD_all.csv -groupName LIC_GoogleEducationPlus_Student -feedUniqueID SamAccountName
 #>
 
 Param
 (
-    [Parameter(Mandatory = $true, HelpMessage = "CSV containing studentID/group assignment")][string] $RosterData
+    [Parameter(Mandatory = $true, HelpMessage = "CSV containing studentID/group assignment")][string] $feedUniqueID,
+    [Parameter(Mandatory = $true, HelpMessage = "CSV containing studentID/group assignment")][string] $groupName,
+    [Parameter(Mandatory = $true, HelpMessage = "CSV containing studentID/group assignment")][string] $feedFile
 )
 
-$data = Import-Csv $RosterData
+$feed = Import-Csv $feedFile
 
-foreach($student in $data)
+foreach($user in $feed)
     {
-        $studentid = $student.studentid
-        $user = Get-ADUser -Filter "employeeID -eq $studentid" | Select-Object samaccountname
-        Add-ADGroupMember -Identity $student.group -Members $user
+        Add-ADGroupMember -Identity $groupName -Members $user.$feedUniqueID
     }
